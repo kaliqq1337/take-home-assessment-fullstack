@@ -10,7 +10,14 @@ function listProducts(_req, res) {
  * when found, or 404 with { error: 'Product not found' } when the id does not match.
  */
 function getProductById(req, res) {
-  res.status(404).json({ error: 'Product not found' });
+  const product = products.find((p) => p.id === req.params.id);
+
+  if (!product) {
+    res.status(404).json({ error: 'Product not found' });
+    return;
+  }
+
+  res.json(product);
 }
 
 module.exports = { listProducts, getProductById };
