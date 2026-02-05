@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import type { Product } from '../types';
+import type { Order, Product } from '../types';
 
 type CartItem = { productId: string; quantity: number };
 
@@ -28,6 +28,11 @@ export default function Cart() {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
+    const [customerEmail, setCustomerEmail] = useState<string>('');
+    const [placingOrder, setPlacingOrder] = useState<boolean>(false);
+    const [placeOrderError, setPlaceOrderError] = useState<string | null>(null);
+    const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+
     useEffect(() => {
         let cancelled = false;
 
@@ -53,7 +58,7 @@ export default function Cart() {
             }
         }
 
-        loadProducts();
+        void loadProducts();
 
         return () => {
             cancelled = true;
@@ -87,13 +92,55 @@ export default function Cart() {
         return 'USD';
     }, [rows]);
 
+    const hasUnknownProducts = useMemo(() => rows.some((r) => !r.product), [rows]);
+
     function updateQuantity(productId: string, nextQuantity: number) {
         const quantity = Number.isFinite(nextQuantity) ? Math.max(1, Math.min(99, Math.floor(nextQuantity))) : 1;
         setItems((prev) => prev.map((it) => (it.productId === productId ? { ...it, quantity } : it)));
+        setPlacedOrder(null);
+        setPlaceOrderError(null);
     }
 
     function removeItem(productId: string) {
         setItems((prev) => prev.filter((it) => it.productId !== productId));
+        setPlacedOrder(null);
+        setPlaceOrderError(null);
+    }
+
+    async function placeOrder() {
+        if (items.length === 0) return;
+
+        if (hasUnknownProducts) {
+            setPlaceOrderError('One or more items refer to an unknown product. Remove them to place the order.');
+            return;
+        }
+
+        setPlacingOrder(true);
+        setPlaceOrderError(null);
+        setPlacedOrder(null);
+
+        try {
+            const body: { customerEmail?: string; items: Array<{ productId: string; quantity: number }> } = {
+                items: items.map((i) => ({
+                    productId: i.productId,
+                    quantity: Math.max(1, Math.floor(i.quantity)),
+                })),
+            };
+
+            const trimmedEmail = customerEmail.trim();
+            if (trimmedEmail.length > 0) body.customerEmail = trimmedEmail;
+
+            const order = await api.createOrder(body);
+            setPlacedOrder(order);
+
+            // Optional UX: clear cart after successful order
+            setItems([]);
+        } catch (e) {
+            const message = e instanceof Error ? e.message : 'Failed to place order';
+            setPlaceOrderError(message);
+        } finally {
+            setPlacingOrder(false);
+        }
     }
 
     return (
@@ -109,9 +156,29 @@ export default function Cart() {
             )}
 
             {!loading && !error && items.length === 0 && (
-                <p>
-                    Your cart is empty. <Link to="/products">Browse products</Link>.
-                </p>
+                <>
+                    {placedOrder ? (
+                        <div
+                            style={{
+                                border: '1px solid #bbf7d0',
+                                background: '#f0fdf4',
+                                padding: 12,
+                                borderRadius: 8,
+                                marginBottom: 12,
+                            }}
+                        >
+                            <div style={{ fontWeight: 700, marginBottom: 4 }}>Order placed successfully</div>
+                            <div style={{ color: '#166534' }}>
+                                Order <span style={{ fontFamily: 'monospace' }}>{placedOrder.id}</span> · Total:{' '}
+                                {formatMoney(displayCurrency, placedOrder.totalAmount)}
+                            </div>
+                        </div>
+                    ) : null}
+
+                    <p>
+                        Your cart is empty. <Link to="/products">Browse products</Link>.
+                    </p>
+                </>
             )}
 
             {!loading && !error && items.length > 0 && (
@@ -204,6 +271,77 @@ export default function Cart() {
                             </tr>
                             </tfoot>
                         </table>
+                    </div>
+
+                    <div
+                        style={{
+                            marginTop: 16,
+                            padding: 12,
+                            borderRadius: 8,
+                            border: '1px solid #e5e7eb',
+                            display: 'grid',
+                            gap: 10,
+                        }}
+                    >
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'end' }}>
+                            <label style={{ display: 'grid', gap: 6, minWidth: 280, flex: 1 }}>
+                                <span style={{ fontSize: 12, color: '#4b5563' }}>Customer email (optional)</span>
+                                <input
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    value={customerEmail}
+                                    onChange={(e) => setCustomerEmail(e.target.value)}
+                                    style={{ padding: 8 }}
+                                    disabled={placingOrder}
+                                />
+                            </label>
+
+                            <button
+                                type="button"
+                                onClick={placeOrder}
+                                disabled={placingOrder || items.length === 0 || hasUnknownProducts}
+                                style={{
+                                    padding: '10px 14px',
+                                    borderRadius: 8,
+                                    border: '1px solid #1e3a5f',
+                                    background: placingOrder ? '#93c5fd' : '#1e3a5f',
+                                    color: '#fff',
+                                    cursor: placingOrder ? 'not-allowed' : 'pointer',
+                                    fontWeight: 700,
+                                }}
+                            >
+                                {placingOrder ? 'Placing order…' : 'Place order'}
+                            </button>
+                        </div>
+
+                        {hasUnknownProducts && (
+                            <div style={{ fontSize: 12, color: '#b45309' }}>
+                                One or more cart items reference an unknown product. Remove them before placing the order.
+                            </div>
+                        )}
+
+                        {placeOrderError && (
+                            <div role="alert" style={{ color: 'crimson' }}>
+                                Error: {placeOrderError}
+                            </div>
+                        )}
+
+                        {placedOrder && (
+                            <div
+                                style={{
+                                    border: '1px solid #bbf7d0',
+                                    background: '#f0fdf4',
+                                    padding: 12,
+                                    borderRadius: 8,
+                                }}
+                            >
+                                <div style={{ fontWeight: 700, marginBottom: 4 }}>Order placed successfully</div>
+                                <div style={{ color: '#166534' }}>
+                                    Order <span style={{ fontFamily: 'monospace' }}>{placedOrder.id}</span> · Total:{' '}
+                                    {formatMoney(displayCurrency, placedOrder.totalAmount)}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div style={{ marginTop: 12, color: '#6b7280', fontSize: 12 }}>
