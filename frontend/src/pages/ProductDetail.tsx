@@ -55,17 +55,51 @@ export default function ProductDetail() {
     }, [id]);
 
     return (
-        <div>
-            <div style={{ marginBottom: 12 }}>
-                <Link to="/products">← Back to products</Link>
+        <div style={{ padding: '20px' }}>
+            <div style={{ marginBottom: 20 }}>
+                <Link to="/products" style={{ textDecoration: 'none', color: '#2563eb' }}>
+                    ← Back to products
+                </Link>
             </div>
 
-            {loading && <p>Loading product…</p>}
+            {loading && (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+                    <p>Loading product details…</p>
+                </div>
+            )}
 
             {!loading && error && (
-                <p role="alert" style={{ color: 'crimson' }}>
-                    {error === 'Product not found' ? 'Product not found (404).' : `Error: ${error}`}
-                </p>
+                <div
+                    role="alert"
+                    style={{
+                        padding: '16px',
+                        borderRadius: '8px',
+                        background: error === 'Product not found' ? '#fffbeb' : '#fef2f2',
+                        border: `1px solid ${error === 'Product not found' ? '#fef3c7' : '#fee2e2'}`,
+                        color: error === 'Product not found' ? '#92400e' : '#b91c1c',
+                    }}
+                >
+                    <p style={{ fontWeight: 600, marginBottom: '4px' }}>
+                        {error === 'Product not found' ? 'Not Found' : 'Error'}
+                    </p>
+                    <p>{error === 'Product not found' ? 'The requested product could not be found.' : error}</p>
+                    {error !== 'Product not found' && (
+                        <button
+                            onClick={() => window.location.reload()}
+                            style={{
+                                marginTop: '12px',
+                                padding: '8px 16px',
+                                background: '#b91c1c',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Retry
+                        </button>
+                    )}
+                </div>
             )}
 
             {!loading && !error && product && (

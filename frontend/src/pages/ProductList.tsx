@@ -72,15 +72,44 @@ export default function ProductList() {
     }, [products, categoryId, sort]);
 
     return (
-        <div>
-            <h1>Products</h1>
+        <div style={{ padding: '20px' }}>
+            <h1 style={{ marginBottom: '20px' }}>Products</h1>
 
-            {loading && <p>Loading products…</p>}
+            {loading && (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
+                    <p>Loading products…</p>
+                </div>
+            )}
 
             {!loading && error && (
-                <p role="alert" style={{ color: 'crimson' }}>
-                    Error: {error}
-                </p>
+                <div
+                    role="alert"
+                    style={{
+                        padding: '16px',
+                        borderRadius: '8px',
+                        background: '#fef2f2',
+                        border: '1px solid #fee2e2',
+                        color: '#b91c1c',
+                        marginBottom: '20px',
+                    }}
+                >
+                    <p style={{ fontWeight: 600, marginBottom: '4px' }}>Error</p>
+                    <p>{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        style={{
+                            marginTop: '12px',
+                            padding: '8px 16px',
+                            background: '#b91c1c',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Retry
+                    </button>
+                </div>
             )}
 
             {!loading && !error && (
