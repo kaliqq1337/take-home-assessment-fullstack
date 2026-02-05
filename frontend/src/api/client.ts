@@ -16,7 +16,7 @@ export async function fetchApi<T>(path: string, options?: RequestInit): Promise<
 
 export const api = {
   getProducts: () => fetchApi<Product[]>('/products'),
-  getProduct: (id: string) => fetchApi<Product>(`/products/${id}`),
+  getProduct: (id: string | undefined) => fetchApi<Product>(`/products/${id}`),
   getCategories: () => fetchApi<Category[]>('/categories'),
   createOrder: (body: { customerEmail?: string; items: Array<{ productId: string; quantity: number }> }) =>
     fetchApi<Order>('/orders', { method: 'POST', body: JSON.stringify(body) }),
